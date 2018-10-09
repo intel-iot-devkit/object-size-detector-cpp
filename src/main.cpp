@@ -93,7 +93,7 @@ const char* keys =
     "{ help h      | | Print help message. }"
     "{ device d    | 0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ minarea min | 10000 | Minimum part area of assembly object. }"
+    "{ minarea min | 20000 | Minimum part area of assembly object. }"
     "{ maxarea max | 30000 | Maximum part area of assembly object. }"
     "{ rate r      | 1 | number of seconds between data updates to MQTT server. }";
 
@@ -351,12 +351,12 @@ int main(int argc, char** argv)
         addImage(frame);
 
         AssemblyInfo info = getCurrentInfo();
-        label = format("Measurement: %d Expected range: [%d , %d] Defect: %s",
+        label = format("Measurement: %d Expected range: [%d - %d] Defect: %s",
                         info.area, min_area, max_area, info.defect? "TRUE" : "FALSE");
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
 
         label = format("Total parts: %d Total Defects: %d", total_parts, total_defects);
-        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
 
         if (info.defect) {
             rectangle(frame, info.rect, CV_RGB(255, 0, 0), 1);
