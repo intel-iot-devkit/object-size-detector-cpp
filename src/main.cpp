@@ -41,8 +41,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
 
-//// MQTT
-//#include "mqtt.h"
+// MQTT
+#include "mqtt.h"
 
 using namespace std;
 using namespace cv;
@@ -52,6 +52,7 @@ using namespace dnn;
 Mat frame, blob;
 VideoCapture cap;
 int delay = 5;
+int rate;
 // nextImage provides queue for captured video frames
 queue<Mat> nextImage;
 
@@ -83,8 +84,19 @@ const char* keys =
     "{ help h      | | Print help message. }"
     "{ device d    | 0 | camera device number. }"
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
-    "{ minarea min   | | Minimum part area of assembly object. }"
-    "{ maxarea max   | | Maximum part area of assembly object. }";
+    "{ minarea min | 10000 | Minimum part area of assembly object. }"
+    "{ maxarea max | 30000 | Maximum part area of assembly object. }"
+    "{ backend b    | 0 | Choose one of computation backends: "
+                        "0: automatically (by default), "
+                        "1: Halide language (http://halide-lang.org/), "
+                        "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                        "3: OpenCV implementation }"
+    "{ target t     | 0 | Choose one of target computation devices: "
+                        "0: CPU target (by default), "
+                        "1: OpenCL, "
+                        "2: OpenCL fp16 (half-float precision), "
+                        "3: VPU }"
+    "{ rate r      | 1 | number of seconds between data updates to MQTT server. }";
 
 // nextImageAvailable returns the next image from the queue in a thread-safe way
 Mat nextImageAvailable() {
@@ -132,29 +144,29 @@ void resetInfo() {
     m2.unlock();
 }
 
-//// publish MQTT message with a JSON payload
-//void publishMQTTMessage(const string& topic, const AssemblyInfo& info)
-//{
-//    ostringstream s;
-//    s << "{\"Count\": \"" << info.count << "\"}";
-//    string payload = s.str();
-//
-//    mqtt_publish(topic, payload);
-//
-//    string msg = "MQTT message published to topic: " + topic;
-//    syslog(LOG_INFO, "%s", msg.c_str());
-//    syslog(LOG_INFO, "%s", payload.c_str());
-//}
-//
-//// message handler for the MQTT subscription for the any desired control channel topic
-//int handleMQTTControlMessages(void *context, char *topicName, int topicLen, MQTTClient_message *message)
-//{
-//    string topic = topicName;
-//    string msg = "MQTT message received: " + topic;
-//    syslog(LOG_INFO, "%s", msg.c_str());
-//
-//    return 1;
-//}
+// publish MQTT message with a JSON payload
+void publishMQTTMessage(const string& topic, const AssemblyInfo& info)
+{
+    ostringstream s;
+    s << "{\"Defect\": \"" << info.defect << "\"}";
+    string payload = s.str();
+
+    mqtt_publish(topic, payload);
+
+    string msg = "MQTT message published to topic: " + topic;
+    syslog(LOG_INFO, "%s", msg.c_str());
+    syslog(LOG_INFO, "%s", payload.c_str());
+}
+
+// message handler for the MQTT subscription for the any desired control channel topic
+int handleMQTTControlMessages(void *context, char *topicName, int topicLen, MQTTClient_message *message)
+{
+    string topic = topicName;
+    string msg = "MQTT message received: " + topic;
+    syslog(LOG_INFO, "%s", msg.c_str());
+
+    return 1;
+}
 
 // Function called by worker thread to process the next available video frame.
 void frameRunner() {
@@ -210,15 +222,15 @@ void frameRunner() {
 }
 
 // Function called by worker thread to handle MQTT updates. Pauses for rate second(s) between updates.
-//void messageRunner() {
-//    while (keepRunning.load()) {
-//        AssemblyInfo info = getCurrentInfo();
-//        publishMQTTMessage(topic, info);
-//        this_thread::sleep_for(chrono::seconds(rate));
-//    }
-//
-//    cout << "MQTT sender thread stopped" << endl;
-//}
+void messageRunner() {
+    while (keepRunning.load()) {
+        AssemblyInfo info = getCurrentInfo();
+        publishMQTTMessage(topic, info);
+        this_thread::sleep_for(chrono::seconds(rate));
+    }
+
+    cout << "MQTT sender thread stopped" << endl;
+}
 
 // signal handler for the main thread
 void handle_sigterm(int signum)
@@ -248,15 +260,15 @@ int main(int argc, char** argv)
     cout << "Min Area: " << min_area << endl;
     cout << "Max Area: " << max_area << endl;
 
-    //// connect MQTT messaging
-    //int result = mqtt_start(handleMQTTControlMessages);
-    //if (result == 0) {
-    //    syslog(LOG_INFO, "MQTT started.");
-    //} else {
-    //    syslog(LOG_INFO, "MQTT NOT started: have you set the ENV varables?");
-    //}
+    // connect MQTT messaging
+    int result = mqtt_start(handleMQTTControlMessages);
+    if (result == 0) {
+        syslog(LOG_INFO, "MQTT started.");
+    } else {
+        syslog(LOG_INFO, "MQTT NOT started: have you set the ENV varables?");
+    }
 
-    //mqtt_connect();
+    mqtt_connect();
 
     // open video capture source
     if (parser.has("input")) {
@@ -310,12 +322,12 @@ int main(int argc, char** argv)
 
     // wait for the threads to finish
     t1.join();
-    //t2.join();
+    t2.join();
     cap.release();
 
-    //// disconnect MQTT messaging
-    //mqtt_disconnect();
-    //mqtt_close();
+    // disconnect MQTT messaging
+    mqtt_disconnect();
+    mqtt_close();
 
     return 0;
 }
