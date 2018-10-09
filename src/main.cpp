@@ -73,6 +73,8 @@ int max_area;
 struct AssemblyInfo
 {
     bool defect;
+    int area;
+    Rect rect;
 };
 
 // currentInfo contains the latest AssemblyInfo as tracked by the application
@@ -124,6 +126,8 @@ AssemblyInfo getCurrentInfo() {
 void updateInfo(AssemblyInfo info) {
     m2.lock();
     currentInfo.defect = info.defect;
+    currentInfo.area = info.area;
+    currentInfo.rect = info.rect;
     m2.unlock();
 }
 
@@ -164,6 +168,7 @@ void frameRunner() {
         Mat next = nextImageAvailable();
         if (!next.empty()) {
             Mat img;
+            Rect max_rect;
             int max_blob_area = 0;
             int part_area = 0;
             bool defect = false;
@@ -190,12 +195,12 @@ void frameRunner() {
             // we will pick detected objects with largest size
             for (size_t i = 0; i < contours.size(); i++)
             {
-                Rect r = boundingRect(contours[i]);
-                rectangle(frame, r, Scalar(0, 0, 255));
-                part_area = r.width * r.height;
+                Rect rect = boundingRect(contours[i]);
+                part_area = rect.width * rect.height;
                 if (part_area > max_blob_area)
                 {
                     max_blob_area = part_area;
+                    max_rect = rect;
                 }
             }
             part_area = max_blob_area;
@@ -210,6 +215,8 @@ void frameRunner() {
 
             AssemblyInfo info;
             info.defect = defect;
+            info.area = part_area;
+            info.rect = max_rect;
 
             updateInfo(info);
         }
@@ -302,8 +309,17 @@ int main(int argc, char** argv)
         addImage(frame);
 
         AssemblyInfo info = getCurrentInfo();
+        label = format("Measurement: %d Expected range: [%d , %d]", info.area, min_area, max_area);
+        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+
         label = format("Defect: %d", info.defect);
         putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
+
+        if (info.defect) {
+            rectangle(frame, info.rect, CV_RGB(255, 0, 0), 1);
+        } else {
+            rectangle(frame, info.rect, CV_RGB(0, 255, 0), 1);
+        }
 
         imshow("Assembly Line Measurements", frame);
 
