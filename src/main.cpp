@@ -68,10 +68,17 @@ const string topic = "defects/counter";
 // assembly part and defect areas
 int min_area;
 int max_area;
+int total_parts = 0;
+int total_defects = 0;
+bool prev_seen = false;
+bool prev_defect = false;
+int frame_defect_count = 0;
+int frame_ok_count = 0;
 
 // AssemblyInfo contains information about assembly line defects
 struct AssemblyInfo
 {
+    bool inc_total;
     bool defect;
     int area;
     Rect rect;
@@ -128,6 +135,12 @@ void updateInfo(AssemblyInfo info) {
     currentInfo.defect = info.defect;
     currentInfo.area = info.area;
     currentInfo.rect = info.rect;
+    if (info.inc_total) {
+        total_parts++;
+    }
+    if (info.defect) {
+        total_defects++;
+    }
     m2.unlock();
 }
 
@@ -135,6 +148,9 @@ void updateInfo(AssemblyInfo info) {
 void resetInfo() {
     m2.lock();
     currentInfo.defect = false;
+    currentInfo.area = 0;
+    currentInfo.inc_total = false;
+    currentInfo.rect = Rect(0,0,0,0);
     m2.unlock();
 }
 
@@ -172,6 +188,8 @@ void frameRunner() {
             int max_blob_area = 0;
             int part_area = 0;
             bool defect = false;
+            bool frame_defect = false;
+            bool inc_total = false;
             Size size(3,3);
             vector<Vec4i> hierarchy;
             vector<vector<Point> > contours;
@@ -207,16 +225,40 @@ void frameRunner() {
 
             // if no object is detected we dont do anything
             if (part_area != 0) {
+                // increment ok or defect counts
                 if (part_area > max_area || part_area < min_area)
                 {
-                    defect = true;
+                    frame_defect = true;
+                    frame_defect_count++;
+                } else {
+                    frame_ok_count++;
                 }
+
+                // if the part wasn't seen before it's a new part
+                if (!prev_seen) {
+                    prev_seen = true;
+                    inc_total = true;
+                } else {
+                    // if the previously seen object has no defect detected in 10 previous consecutive frames
+                    if (!frame_defect && frame_ok_count > 10) {
+                        frame_defect_count = 0;
+                    }
+                    // if previously seen object has a defect detected in 10 previous consecutive frames
+                    if (frame_defect && frame_defect_count > 10) {
+                        frame_ok_count = 0;
+                        defect = true;
+                    }
+                }
+            } else if (prev_seen) {
+                // no part detected: reset prev_seen and frame_defect_count -- we are looking at empty belt
+                prev_seen = false;
             }
 
             AssemblyInfo info;
             info.defect = defect;
             info.area = part_area;
             info.rect = max_rect;
+            info.inc_total = inc_total;
 
             updateInfo(info);
         }
@@ -309,10 +351,11 @@ int main(int argc, char** argv)
         addImage(frame);
 
         AssemblyInfo info = getCurrentInfo();
-        label = format("Measurement: %d Expected range: [%d , %d]", info.area, min_area, max_area);
+        label = format("Measurement: %d Expected range: [%d , %d] Defect: %s",
+                        info.area, min_area, max_area, info.defect? "TRUE" : "FALSE");
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
 
-        label = format("Defect: %d", info.defect);
+        label = format("Total parts: %d Total Defects: %d", total_parts, total_defects);
         putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 0, 0));
 
         if (info.defect) {
