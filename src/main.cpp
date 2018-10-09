@@ -245,13 +245,17 @@ void frameRunner() {
                     }
                     // if previously seen object has a defect detected in 10 previous consecutive frames
                     if (frame_defect && frame_defect_count > 10) {
+                        if (!prev_defect) {
+                            prev_defect = true;
+                            defect = true;
+                        }
                         frame_ok_count = 0;
-                        defect = true;
                     }
                 }
             } else if (prev_seen) {
                 // no part detected: reset prev_seen and frame_defect_count -- we are looking at empty belt
                 prev_seen = false;
+                prev_defect = false;
             }
 
             AssemblyInfo info;
