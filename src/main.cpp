@@ -49,7 +49,7 @@ using namespace cv;
 using namespace dnn;
 
 // OpenCV-related variables
-Mat frame, blob;
+Mat frame, displayFrame;
 VideoCapture cap;
 int delay = 5;
 int rate;
@@ -81,6 +81,7 @@ struct AssemblyInfo
     bool inc_total;
     bool defect;
     int area;
+    bool show;
     Rect rect;
 };
 
@@ -133,6 +134,7 @@ AssemblyInfo getCurrentInfo() {
 void updateInfo(AssemblyInfo info) {
     m2.lock();
     currentInfo.defect = info.defect;
+    currentInfo.show = info.show;
     currentInfo.area = info.area;
     currentInfo.rect = info.rect;
     if (info.inc_total) {
@@ -263,6 +265,7 @@ void frameRunner() {
 
             AssemblyInfo info;
             info.defect = defect;
+            info.show = prev_defect;
             info.area = part_area;
             info.rect = max_rect;
             info.inc_total = inc_total;
@@ -355,23 +358,24 @@ int main(int argc, char** argv)
         }
 
         resize(frame, frame, Size(960, 540));
+        displayFrame = frame.clone();
         addImage(frame);
 
         AssemblyInfo info = getCurrentInfo();
         label = format("Measurement: %d Expected range: [%d - %d] Defect: %s",
                         info.area, min_area, max_area, info.defect? "TRUE" : "FALSE");
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
+        putText(displayFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
 
         label = format("Total parts: %d Total Defects: %d", total_parts, total_defects);
-        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
+        putText(displayFrame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
 
-        if (info.defect) {
-            rectangle(frame, info.rect, CV_RGB(255, 0, 0), 1);
+        if (info.show) {
+            rectangle(displayFrame, info.rect, CV_RGB(255, 0, 0), 1);
         } else {
-            rectangle(frame, info.rect, CV_RGB(0, 255, 0), 1);
+            rectangle(displayFrame, info.rect, CV_RGB(0, 255, 0), 1);
         }
 
-        imshow("Assembly Line Measurements", frame);
+        imshow("Assembly Line Measurements", displayFrame);
 
         if (waitKey(delay) >= 0 || sig_caught) {
             cout << "Attempting to stop background threads" << endl;
