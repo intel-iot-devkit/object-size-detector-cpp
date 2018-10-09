@@ -215,7 +215,8 @@ void frameRunner() {
             {
                 Rect rect = boundingRect(contours[i]);
                 part_area = rect.width * rect.height;
-                if (part_area > max_blob_area)
+                // is large enough, and completely within the camera with no overlapping edge.
+                if (part_area > max_blob_area && rect.x > 0 && rect.x + rect.width < img.cols && rect.width > 30)
                 {
                     max_blob_area = part_area;
                     max_rect = rect;
