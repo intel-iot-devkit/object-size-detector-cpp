@@ -86,16 +86,6 @@ const char* keys =
     "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ minarea min | 10000 | Minimum part area of assembly object. }"
     "{ maxarea max | 30000 | Maximum part area of assembly object. }"
-    "{ backend b    | 0 | Choose one of computation backends: "
-                        "0: automatically (by default), "
-                        "1: Halide language (http://halide-lang.org/), "
-                        "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                        "3: OpenCV implementation }"
-    "{ target t     | 0 | Choose one of target computation devices: "
-                        "0: CPU target (by default), "
-                        "1: OpenCL, "
-                        "2: OpenCL fp16 (half-float precision), "
-                        "3: VPU }"
     "{ rate r      | 1 | number of seconds between data updates to MQTT server. }";
 
 // nextImageAvailable returns the next image from the queue in a thread-safe way
@@ -182,16 +172,22 @@ void frameRunner() {
             vector<vector<Point> > contours;
 
             cvtColor(frame, img, CV_RGB2GRAY);
+            // Blur the image to smooth it before easier preprocessing
             GaussianBlur(img, img, size, 0, 0 );
 
+            // Morphology: OPEN -> CLOSE -> OPEN
+            // MORPH_OPEN removes the noise and closes the "holes" in the background
+            // MORPH_CLOSE remove the noise and closes the "holes" in the foreground
             morphologyEx(img, img, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE, size));
             morphologyEx(img, img, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE, size));
             morphologyEx(img, img, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE, size));
 
+            // threshold the image to emphasize assembly part
             threshold(img, img, 200, 255, THRESH_BINARY);
-
+            // find the contours of assembly part
             findContours(img, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 
+            // we will pick detected objects with largest size
             for (size_t i = 0; i < contours.size(); i++)
             {
                 Rect r = boundingRect(contours[i]);
@@ -204,6 +200,7 @@ void frameRunner() {
             }
             part_area = max_blob_area;
 
+            // if no object is detected we dont do anything
             if (part_area != 0) {
                 if (part_area > max_area || part_area < min_area)
                 {
@@ -257,9 +254,6 @@ int main(int argc, char** argv)
     min_area = parser.get<int>("minarea");
     max_area = parser.get<int>("maxarea");
 
-    cout << "Min Area: " << min_area << endl;
-    cout << "Max Area: " << max_area << endl;
-
     // connect MQTT messaging
     int result = mqtt_start(handleMQTTControlMessages);
     if (result == 0) {
@@ -291,7 +285,7 @@ int main(int argc, char** argv)
 
     // start worker threads
     thread t1(frameRunner);
-    //thread t2(messageRunner);
+    thread t2(messageRunner);
 
     string label;
     // read video input data

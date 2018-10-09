@@ -98,20 +98,6 @@ The `-min` flag controls the minimum size of the are the part needs to occupy to
 
 The `-max` flag controls the maximum size of the are the part needs to occupy to be considered good
 
-### Hardware acceleration
-
-This application can take advantage of the hardware acceleration in the OpenVINO toolkit by using the `-b` and `-t` parameters.
-
-For example, to use the OpenVINO™ toolkit backend with the GPU in 32-bit mode:
-```
-    ./monitor -min=10000 -max=30000 -b=2 -t=1
-```
-
-To run the code using 16-bit floats, you have to both set the `-t` flag to use the GPU in 16-bit mode, as well as use the FP16 version of the Intel® models:
-```
-    ./monitor -min=10000 -max=30000 -b=2 -t=2
-```
-
 ## Sample videos
 
 There are several videos available to use as sample videos to show the capabilities of this application. You can download them by running these commands from the `assembly-line-measurements` directory:
