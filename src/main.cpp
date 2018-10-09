@@ -252,10 +252,12 @@ void frameRunner() {
                         frame_ok_count = 0;
                     }
                 }
-            } else if (prev_seen) {
-                // no part detected: reset prev_seen and frame_defect_count -- we are looking at empty belt
+            } else {
+                // no part detected -- we are looking at empty belt. reset values.
                 prev_seen = false;
                 prev_defect = false;
+                frame_defect_count = 0;
+                frame_ok_count = 0;
             }
 
             AssemblyInfo info;
