@@ -1,4 +1,4 @@
-# Available Parking Tracker
+# Assembly Line Measurements
 
 | Details            |              |
 |-----------------------|---------------|
@@ -6,13 +6,13 @@
 | Programming Language: |  C++\* |
 | Time to Complete:     |  45 min     |
 
-![app image](./images/parking-space-monitor.png)
+![app image](./images/assembly-line-monitor.png)
 
 ## Introduction
 
-This parking space monitor is one of a series of reference implementations for Computer Vision (CV) using the OpenVINO™ toolkit. This application is designed for a parking space area mounted camera which monitors available parking space by tracking the counts of the vehicles entering and leaving the parking space area.
+This assembly line parts monitoring application is one of a series of reference implementations for Computer Vision (CV) using the OpenVINO™ toolkit. This application is designed for an assembly line camera mounted above the assembly line belt. The application monitors mechanical parts as they are moving down the assembly line and raises an alert if detects that the size of the part on the belt is not withing the specified range.
 
-This example is intended to demonstrate how to use CV to monitor parking spaces in dedicated parking area.
+This example is intended to demonstrate how to use CV to monitor defected assembly line parts.
 
 ## Requirements
 
@@ -38,16 +38,9 @@ instructions below. It is not mandatory for CPU inference.
 
 ## How it works
 
-The application uses a video source, such as a camera, to grab frames, and then uses a Deep Neural Network (DNNs) to process the data. The network detects vehicles in the frame, and then if successful it tracks the vehicles leaving and entering the parking area adjusting the counts of the vehicles in the parking area thus providing the information about the available parking spaces.
+The application uses a video source, such as a camera, to grab frames, and then uses `OpenCV` algorithms to process the captured data. It detects objects on the assembly line, such as bolts, and calculates the are they occupy. If this are is not withing the predefined range as specified via command line parameters it raises alert to notify the assembly line operator.
 
-The data can then optionally be sent to a MQTT machine to machine messaging server, as part of a parking space data analytics system.
-
-The DNN models used in this application are Intel® optimized models that are part of the OpenVINO™ toolkit.
-
-You can find them here:
-
-- `/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002
-`
+The data can then optionally be sent to a MQTT machine to machine messaging server, as part of an assembly line data analytics system.
 
 ![Code organization](./images/arch3.png)
 
@@ -68,7 +61,7 @@ You must configure the environment to use the OpenVINO™ toolkit one time per s
 
 Start by changing the current directory to wherever you have git cloned the application code. For example:
 ```
-    cd available-parking-tracker-cpp
+    cd assembly-line-measurements
 ```
 
 If you do not yet have a `build` directory create one:
@@ -98,46 +91,27 @@ To see a list of the various options:
 
 To run the application with the needed models using the webcam:
 ```
-    ./monitor -m=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.bin -c=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.xml
+    ./monitor -min=10000 -max=30000
 ```
 
-To control the monitoring line to be used for counting of entry/exit from the parking area, use the `-axis` and `-bline` flags, like this:
-```
-    ./monitor -m=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.bin -c=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.xml -axis=y -bline=350
-```
+The `-min` flag controls the minimum size of the are the part needs to occupy to be considered good
 
-The `-axis` flag controls which axis is to be used for counting, either `"x"` for counting going left/right, or `"y"` for counting up/down.
-
-The  `-bline` flag controls the baseline positioning. For example `-bline=100` will place the baseline 100 pixels counting from either the left side if `-axis=x` or the top if `-axis=y`.
-
-### Hardware acceleration
-
-This application can take advantage of the hardware acceleration in the OpenVINO toolkit by using the `-b` and `-t` parameters.
-
-For example, to use the OpenVINO™ toolkit backend with the GPU in 32-bit mode:
-```
-    ./monitor -m=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.bin -c=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.xml -b=2 -t=1
-```
-
-To run the code using 16-bit floats, you have to both set the `-t` flag to use the GPU in 16-bit mode, as well as use the FP16 version of the Intel® models:
-```
-    ./monitor -m=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP16/vehicle-detection-adas-0002.bin -c=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP16/vehicle-detection-adas-0002.xml -b=2 -t=2
-```
+The `-max` flag controls the maximum size of the are the part needs to occupy to be considered good
 
 ## Sample videos
 
-There are several videos available to use as sample videos to show the capabilities of this application. You can download them by running these commands from the `available-parking-tracker-cpp` directory:
+There are several videos available to use as sample videos to show the capabilities of this application. You can download them by running these commands from the `assembly-line-measurements` directory:
 ```
     mkdir resources
     cd resources
-    wget https://github.com/intel-iot-devkit/sample-videos/raw/master/car-detection.mp4
+    wget https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4
     cd ..
 ```
 
-To then execute the code using one of these sample videos, run the following commands from the `available-parking-tracker-cpp` directory:
+To then execute the code using one of these sample videos, run the following commands from the `assembly-line-measurements` directory:
 ```
     cd build
-    ./monitor -m=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.bin -c=/opt/intel/computer_vision_sdk/deployment_tools/intel_models/vehicle-detection-adas-0002/FP32/vehicle-detection-adas-0002.xml -i=../resources/car-detection.mp4
+    ./monitor -min=10000 -max=30000 -i=../resources/bolt-detection.mp4
 ```
 
 ### Machine to machine messaging with MQTT
@@ -152,5 +126,5 @@ Change the `MQTT_SERVER` to a value that matches the MQTT server you are connect
 
 You should change the `MQTT_CLIENT_ID` to a unique value for each monitoring station, so you can track the data for individual locations. For example:
 ```
-    export MQTT_CLIENT_ID=parkinglot1337
+    export MQTT_CLIENT_ID=assemblyline1337
 ```
