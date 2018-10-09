@@ -10,9 +10,9 @@
 
 ## Introduction
 
-This assembly line parts monitoring application is one of a series of reference implementations for Computer Vision (CV) using the OpenVINO™ toolkit. This application is designed for an assembly line camera mounted above the assembly line belt. The application monitors mechanical parts as they are moving down the assembly line and raises an alert if detects that the size of the part on the belt is not withing the specified range.
+This assembly line parts monitoring application is one of a series of reference implementations for Computer Vision (CV) using the OpenVINO™ toolkit. This application is designed for an assembly line camera mounted above the assembly line belt. The application monitors mechanical parts as they are moving down the assembly line and raises an alert if detects that the size of the part on the belt is not withing the specified area range.
 
-This example is intended to demonstrate how to use CV to monitor defected assembly line parts.
+This example is intended to demonstrate how to use CV to measure the approximate size of detected assembly line parts.
 
 ## Requirements
 
