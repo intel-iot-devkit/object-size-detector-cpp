@@ -375,7 +375,7 @@ int main(int argc, char** argv)
             rectangle(displayFrame, info.rect, CV_RGB(0, 255, 0), 1);
         }
 
-        imshow("Assembly Line Measurements", displayFrame);
+        imshow("Object Size Detector", displayFrame);
 
         if (waitKey(delay) >= 0 || sig_caught) {
             cout << "Attempting to stop background threads" << endl;
