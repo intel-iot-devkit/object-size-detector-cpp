@@ -6,7 +6,7 @@
 | Programming Language: |  C++\* |
 | Time to Complete:     |  45 min     |
 
-![app image](./images/object-size-detector.png)
+![app image](./docs/images/object-size-detector.png)
 
 ## What It Does
 
@@ -31,7 +31,7 @@ uname -a
 
 This object size detector works with a video source, such as a camera. The application captures video frames and processes the frame data with OpenCV* algorithms. It detects objects on the assembly line and calculates the area (length x width) the objects occupy. If the calculated area is not within a predefined range, as specified via command line parameters, the application raises an alert to notify the assembly line operator. Optionally, the application sends data to a message queuing telemetry transport (MQTT) machine, or machine messaging server, as part of an assembly line data analytics system.
 
-![Code organization](./images/arch3.png)
+![Code organization](./docs/images/arch3.png)
 
 The program creates three threads for concurrency:
 
