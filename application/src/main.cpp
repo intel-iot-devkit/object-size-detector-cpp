@@ -33,6 +33,7 @@
 #include <mutex>
 #include <syslog.h>
 #include <string>
+#include <fstream>
 
 // OpenCV includes
 #include <opencv2/core.hpp>
@@ -40,6 +41,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
+#include <nlohmann/json.hpp>
 
 // MQTT
 #include "mqtt.h"
@@ -47,6 +49,9 @@
 using namespace std;
 using namespace cv;
 using namespace dnn;
+using json = nlohmann::json;
+json jsonobj;
+
 
 // OpenCV-related variables
 Mat frame, displayFrame;
@@ -92,8 +97,6 @@ mutex m, m1, m2;
 
 const char* keys =
     "{ help h      | | Print help message. }"
-    "{ device d    | 0 | camera device number. }"
-    "{ input i     | | Path to input image or video file. Skip this argument to capture frames from a camera. }"
     "{ minarea min | 20000 | Minimum part area of assembly object. }"
     "{ maxarea max | 30000 | Maximum part area of assembly object. }"
     "{ rate r      | 1 | number of seconds between data updates to MQTT server. }";
@@ -196,7 +199,7 @@ void frameRunner() {
             vector<Vec4i> hierarchy;
             vector<vector<Point> > contours;
 
-            cvtColor(frame, img, CV_RGB2GRAY);
+            cvtColor(frame, img, COLOR_RGB2GRAY);
             // Blur the image to smooth it before easier preprocessing
             GaussianBlur(img, img, size, 0, 0 );
 
@@ -210,7 +213,7 @@ void frameRunner() {
             // threshold the image to emphasize assembly part
             threshold(img, img, 200, 255, THRESH_BINARY);
             // find the contours of assembly part
-            findContours(img, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+            findContours(img, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
             // we will pick detected objects with largest size
             for (size_t i = 0; i < contours.size(); i++)
@@ -302,6 +305,11 @@ int main(int argc, char** argv)
 {
     // parse command parameters
     CommandLineParser parser(argc, argv, keys);
+    String input;
+    std::string conf_file = "../resources/config.json";
+    std::ifstream confFile(conf_file);
+    confFile>>jsonobj;
+
     parser.about("Use this script to using OpenVINO.");
     if (argc == 1 || parser.has("help"))
     {
@@ -312,6 +320,25 @@ int main(int argc, char** argv)
 
     min_area = parser.get<int>("minarea");
     max_area = parser.get<int>("maxarea");
+    rate = parser.get<int>("rate");
+
+    auto obj = jsonobj["inputs"];
+    input = obj[0]["video"];
+
+    if (input.size() == 1 && *(input.c_str()) >= '0' && *(input.c_str()) <= '9')
+        cap.open(std::stoi(input));
+    else
+        cap.open(input);
+
+    if (!cap.isOpened())
+    {
+        cerr << "ERROR! Unable to open video source\n";
+        return -1;
+    }
+
+    // Also adjust delay so video playback matches the number of FPS in the file
+    double fps = cap.get(CAP_PROP_FPS);
+    delay = 1000 / fps;
 
     // connect MQTT messaging
     int result = mqtt_start(handleMQTTControlMessages);
@@ -322,22 +349,6 @@ int main(int argc, char** argv)
     }
 
     mqtt_connect();
-
-    // open video capture source
-    if (parser.has("input")) {
-        cap.open(parser.get<String>("input"));
-
-        // also adjust delay so video playback matches the number of FPS in the file
-        double fps = cap.get(CAP_PROP_FPS);
-        delay = 1000/fps;
-    }
-    else
-        cap.open(parser.get<int>("device"));
-
-    if (!cap.isOpened()) {
-        cerr << "ERROR! Unable to open video source\n";
-        return -1;
-    }
 
     // register SIGTERM signal handler
     signal(SIGTERM, handle_sigterm);
@@ -364,15 +375,15 @@ int main(int argc, char** argv)
         AssemblyInfo info = getCurrentInfo();
         label = format("Measurement: %d Expected range: [%d - %d] Defect: %s",
                         info.area, min_area, max_area, info.defect? "TRUE" : "FALSE");
-        putText(displayFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
+        putText(displayFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         label = format("Total parts: %d Total Defects: %d", total_parts, total_defects);
-        putText(displayFrame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(0, 255, 0));
+        putText(displayFrame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         if (info.show) {
-            rectangle(displayFrame, info.rect, CV_RGB(255, 0, 0), 1);
+            rectangle(displayFrame, info.rect, Scalar(255, 0, 0), 1);
         } else {
-            rectangle(displayFrame, info.rect, CV_RGB(0, 255, 0), 1);
+            rectangle(displayFrame, info.rect, Scalar(0, 255, 0), 1);
         }
 
         imshow("Object Size Detector", displayFrame);

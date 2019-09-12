@@ -8,27 +8,26 @@
 
 ![app image](./images/object-size-detector.png)
 
-## Introduction
+## What It Does
 
-This object size detector application is one of a series of computer vision (CV) reference implementations using the OpenVINO™ toolkit. This application demonstrates how to use CV to detect and measure the approximate size of assembly line parts. It is designed to work with an assembly line camera mounted above the assembly line belt. The application monitors mechanical parts as they are moving down the assembly line and raises an alert if it detects a part on the belt outside a specified size range.
+ This application demonstrates how to use CV to detect and measure the approximate size of assembly line parts. It is designed to work with an assembly line camera mounted above the assembly line belt. The application monitors mechanical parts as they are moving down the assembly line and raises an alert if it detects a part on the belt outside a specified size range.
 
 ## Requirements
 
 ### Hardware
-* 6th Generation Intel® Core™ processor with Intel® Iris® Pro graphics and Intel® HD Graphics
+* 6th to 8th Generation Intel® Core™ processors with Intel® Iris® Pro graphics and Intel® HD Graphics
 
 ### Software
 * [Ubuntu\* 16.04 LTS](http://releases.ubuntu.com/16.04/)
-*Note*: NOTE: Use kernel versions 4.14+ with this software. However, kernel versions 4.7+ are also recommended.
+*Note*: Use kernel versions 4.14+ with this software. However, kernel versions 4.7+ are also recommended.
 
 Determine the kernel version with the uname command. In a terminal window type on the command line:
 ```
 uname -a
 ```
-* OpenCL™ Runtime Package
-* OpenVINO™ toolkit
+* Intel® Distribution of OpenVINO™ toolkit 2019 R2 Release
 
-## How it works
+## How It Works
 
 This object size detector works with a video source, such as a camera. The application captures video frames and processes the frame data with OpenCV* algorithms. It detects objects on the assembly line and calculates the area (length x width) the objects occupy. If the calculated area is not within a predefined range, as specified via command line parameters, the application raises an alert to notify the assembly line operator. Optionally, the application sends data to a message queuing telemetry transport (MQTT) machine, or machine messaging server, as part of an assembly line data analytics system.
 
@@ -40,89 +39,137 @@ The program creates three threads for concurrency:
 - A worker thread that processes video frames using the deep neural networks
 - A worker thread that publishes MQTT messages
 
-## Pre-requisites
+## Setup
 
-### Install OpenVINO™ Toolkit
-Before running the application, install the OpenVINO™ toolkit. For details, see [Installing the OpenVINO™ toolkit for Linux*](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux)
+### Get the code
 
-### Install OpenCL™ Runtime Package
-
-For GPU-based inference, install the OpenCL™ Runtime Package. This step is not necessary for CPU-based inference.
-
-## Setting the build environment
-
-Configure the environment to use the OpenVINO™ toolkit once per session by running the **source** command on the command line:
+Clone the reference implementation
 ```
-    source /opt/intel/computer_vision_sdk/bin/setupvars.sh
+sudo apt-get update && sudo apt-get install git
+git clone https://github.com/intel-iot-devkit/object-size-detector-cpp.git
 ```
 
-## Build the code
+### Install OpenVINO
 
-Change the current directory to the git-cloned application code location on your system:
+Refer to [Install Intel® Distribution of OpenVINO™ toolkit for Linux*](https://software.intel.com/en-us/articles/OpenVINO-Install-Linux) to learn how to install and configure the toolkit.
+
+### Other dependencies
+
+**Mosquitto**<br>
+
+Mosquitto is an open source message broker that implements the MQTT protocol. The MQTT protocol provides a lightweight method of carrying out messaging using a publish/subscribe model.
+
+### Install the dependencies
+
+To download the sample video and install the dependencies of the application, run the below command in the `object-size-detector-cpp` directory:
 ```
-    cd assembly-line-measurements
+./setup.sh
+```
+### The Config File
+
+The _resources/config.json_ contains the path of videos that will be used by the application as input. Each block represents one video file.
+
+For example:
+   ```
+   {
+       "inputs": [
+          {
+              "video":"path_to_video/video1.mp4"
+          }
+       ]
+   }
+   ```
+
+The `path/to/video` is the path to an input video file.
+
+### Which Input Video to use
+
+We recommend using the [bolt-multi-size-detection](https://github.com/intel-iot-devkit/sample-videos/blob/master/bolt-multi-size-detection.mp4) video. For example:
+
+```
+{
+   "inputs":[
+      {
+         "video":"sample-videos/bolt-multi-size-detection.mp4"
+      }
+   ]
+}
 ```
 
-If a build directory does not exist, create one:
+### Using the Camera Stream instead of video
+
+Replace `path/to/video` with the camera ID in the **config.json** file, where the ID is taken from the video device (the number **X** in /dev/video**X**).
+
+On Ubuntu, to list all available video devices use the following command:
+
 ```
-    mkdir build
+ls /dev/video*
 ```
 
-Change to the build directory:
+For example, if the output of above command is __/dev/video0__, then config.json would be:
+
 ```
-    cd build
+  {
+     "inputs": [
+        {
+           "video":"0"
+        }
+     ]
+   }
 ```
 
-The make commands generate the monitor file, the application’s executable. Run the make commands:
+
+### Setup the Environment
+
+Configure the environment to use the Intel® Distribution of OpenVINO™ toolkit by exporting environment variables:
+
 ```
-    cmake ..
-    make
+source /opt/intel/openvino/bin/setupvars.sh
 ```
 
-Once the commands are finished, you should have built the `monitor` application executable.
+__Note__: This command needs to be executed only once in the terminal where the application will be executed. If the terminal is closed, the command needs to be executed again.
 
-## Run the code
+### Build the Application
 
-To see a list of the various options, invoke the help output of this application with the help parameter:
+To build, go to the `object-size-detector-cpp` and run the following commands:
+
 ```
-    ./monitor -help
+mkdir -p build && cd build
+cmake ..
+make
 ```
 
-To run the application with the necessary settings using a webcam, use the min and max parameters:
+## Run the Application
+
+To see a list of the various options:
 ```
-    ./monitor -min=10000 -max=30000
+./monitor -help
+```
+
+To run the application with the necessary settings, use the min and max parameters:
+```
+./monitor -min=10000 -max=30000
 ```
 
 The min and max parameters set the values for the minimum and maximum sizes of the part area. If a part’s calculated area in pixels is not within this range, the application issues an alert.
 
-## Sample videos
+### Machine to Machine Messaging with MQTT
 
-The reference implementation provides several sample videos to demonstrate the capabilities of this application. 
-
-Download the videos by running this series of commands from the `assembly-line-measurements` directory:
+If you wish to use a MQTT server to publish data, you should set the following environment variables before running the program:
 ```
-    mkdir resources
-    cd resources
-    wget https://github.com/intel-iot-devkit/sample-videos/raw/master/bolt-detection.mp4
-    cd ..
+export MQTT_SERVER=localhost:1883
+export MQTT_CLIENT_ID=cvservice
 ```
 
-To execute the code using one of these sample videos, change directory to the application’s build directory. Run the application from the `assembly-line-measurements` directory with the `-i` input command:
-```
-    cd build
-    ./monitor -min=10000 -max=30000 -i=../resources/bolt-detection.mp4
-```
+Change the `MQTT_SERVER` to a value that matches the MQTT server you are connecting to.
 
-### Machine-to-Machine Messaging with MQTT
-
-To use a MQTT server to publish data, set the `MQTT_SERVER` and `MQTT_CLIENT_ID` environment variables with the export command before running the program:
-```
-    export MQTT_SERVER=localhost:1883
-    export MQTT_CLIENT_ID=cvservice
-```
-
-NOTE: Set the `MQTT_SERVER` to the value of the server on your system. Change the `MQTT_CLIENT_ID` to a unique value for each monitoring station to enable tracking data for individual locations.
+You should change the `MQTT_CLIENT_ID` to a unique value for each monitoring station, so you can track the data for individual locations. For example:
 
 ```
-    export MQTT_CLIENT_ID=assemblyline1337
+export MQTT_CLIENT_ID=assemblyline1337
+```
+
+If you want to monitor the MQTT messages sent to your local server, and you have the `mosquitto` client utilities installed, you can run the following command on a new terminal while the application is running:
+```
+mosquitto_sub -t 'defects/counter'
 ```
