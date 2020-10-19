@@ -22,6 +22,7 @@
 '
 sudo apt-get update
 sudo apt-get install mosquitto mosquitto-clients    # install mosquitto
+sudo apt-get install pkg-config
 
 if [ -d = "json" ]
 then

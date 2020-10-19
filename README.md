@@ -2,7 +2,7 @@
 
 | Details            |              |
 |-----------------------|---------------|
-| Target OS:            |  Ubuntu\* 16.04 LTS   |
+| Target OS:            |  Ubuntu\* 18.04 LTS   |
 | Programming Language: |  C++\* |
 | Time to Complete:     |  45 min     |
 
@@ -18,14 +18,14 @@
 * 6th to 8th Generation Intel® Core™ processors with Intel® Iris® Pro graphics and Intel® HD Graphics
 
 ### Software
-* [Ubuntu\* 16.04 LTS](http://releases.ubuntu.com/16.04/)
-*Note*: Use kernel versions 4.14+ with this software. However, kernel versions 4.7+ are also recommended.
+* [Ubuntu\* 18.04 LTS](http://releases.ubuntu.com/18.04/)
+*Note*: Use kernel versions 4.14+ with this software.
 
 Determine the kernel version with the uname command. In a terminal window type on the command line:
 ```
 uname -a
 ```
-* Intel® Distribution of OpenVINO™ toolkit 2019 R2 Release
+* Intel® Distribution of OpenVINO™ toolkit 2020 R3 Release
 
 ## How It Works
 
@@ -46,7 +46,7 @@ The program creates three threads for concurrency:
 Clone the reference implementation
 ```
 sudo apt-get update && sudo apt-get install git
-git clone https://github.com/intel-iot-devkit/object-size-detector-cpp.git
+git clone https://github.com/intel-iot-devkit/object-size-detector-cpp.git 
 ```
 
 ### Install OpenVINO
